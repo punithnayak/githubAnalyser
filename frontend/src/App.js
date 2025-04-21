@@ -305,49 +305,6 @@ export default function App() {
               </Box>
             )}
 
-            {/* ── Commit statistics */}
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                Commit Statistics
-              </Typography>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3,1fr)",
-                  gap: 2,
-                }}
-              >
-                <Paper sx={{ p: 2 }} elevation={2}>
-                  <Typography variant="h6">
-                    {repoData.commit_stats.total_commits}
-                  </Typography>
-                  <Typography variant="body2">Total Commits</Typography>
-                </Paper>
-                <Paper sx={{ p: 2 }} elevation={2}>
-                  <Typography variant="h6">
-                    {repoData.commit_stats.avg_weekly_commits}
-                  </Typography>
-                  <Typography variant="body2">Avg per Week</Typography>
-                </Paper>
-                <Paper sx={{ p: 2 }} elevation={2}>
-                  <Typography variant="h6">
-                    {
-                      [
-                        "Sun",
-                        "Mon",
-                        "Tue",
-                        "Wed",
-                        "Thu",
-                        "Fri",
-                        "Sat",
-                      ][repoData.commit_stats.most_active_day.day]
-                    }
-                  </Typography>
-                  <Typography variant="body2">Most Active Day</Typography>
-                </Paper>
-              </Box>
-            </Box>
-
             {/* ── Code-change summary */}
             {repoData.code_frequency?.total && (
               <Box sx={{ mb: 4 }}>
