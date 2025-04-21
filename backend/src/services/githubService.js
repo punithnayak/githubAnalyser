@@ -10,8 +10,6 @@ const getCommitActivity  = (owner, repo) => fetchWithRetry(`/repos/${owner}/${re
 const getCodeFrequency   = (owner, repo) => fetchWithRetry(`/repos/${owner}/${repo}/stats/code_frequency`);
 const getPunchCard       = (owner, repo) => fetchWithRetry(`/repos/${owner}/${repo}/stats/punch_card`);
 const getContributorStats= (owner, repo) => fetchWithRetry(`/repos/${owner}/${repo}/stats/contributors`);
-const getClosedPRs       = (owner, repo) => gh(`/repos/${owner}/${repo}/pulls?state=closed&per_page=100`);
-const getClosedIssues    = (owner, repo) => gh(`/repos/${owner}/${repo}/issues?state=closed&per_page=100`);
 
 module.exports = {
   getRepoData,
@@ -21,7 +19,5 @@ module.exports = {
   getCommitActivity,
   getCodeFrequency,
   getPunchCard,
-  getContributorStats,
-  getClosedPRs,
-  getClosedIssues
+  getContributorStats
 };

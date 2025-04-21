@@ -12,15 +12,13 @@ const {
     getCommitActivity,
     getCodeFrequency,
     getPunchCard,
-    getContributorStats,
-    getClosedPRs,
-    getClosedIssues
+    getContributorStats
   } = require('../services/githubService');
   
   const { avg, median }  = require('../utils/math');
   const parseRepoUrl     = require('../utils/parseRepoUrl');
   
-  const MS_IN_WEEK = 604_800_000; // 7 × 24 × 3600 × 1000
+  const MS_IN_WEEK = 604_800_000; // 7 × 24 × 3600 × 1000
   
   /**
    * End‑to‑end repository analysis.
@@ -64,21 +62,17 @@ const {
       })
     );
   
-    // ─── Heavy stats from /stats/* endpoints + last‑100 PR/issue ─
+    // ─── Heavy stats from /stats/* endpoints ─────────────────
     const [
       commitActivity,
       codeFreqRaw,
       punchCard,
-      contribStats,
-      closedPRs,
-      closedIssues
+      contribStats
     ] = await Promise.all([
       getCommitActivity(owner, repo),
       getCodeFrequency(owner, repo),
       getPunchCard(owner, repo),
-      getContributorStats(owner, repo),
-      getClosedPRs(owner, repo),
-      getClosedIssues(owner, repo)
+      getContributorStats(owner, repo)
     ]);
   
     // ─── Language histogram (% of bytes) ────────────────────
@@ -87,7 +81,7 @@ const {
       Object.entries(languages).map(([k, v]) => [k, +(v * 100 / langSum).toFixed(2)])
     );
   
-    // ─── Punch‑card matrix (7 days × 24 hours) ───────────────
+    // ─── Punch‑card matrix (7 days × 24 hours) ───────────────
     const punchMatrix = Array.from({ length: 7 }, () => Array(24).fill(0));
     punchCard.forEach(([d, h, n]) => {
       punchMatrix[d][h] = n;
@@ -108,16 +102,6 @@ const {
       ...c,
       ...(linesByUser[c.login] || { additions: 0, deletions: 0 })
     }));
-  
-    // ─── PR + Issue durations (last 100) ────────────────────
-    const mergedPRs = closedPRs.filter((pr) => pr.merged_at).length;
-    const prDur     = closedPRs
-      .filter((pr) => pr.merged_at)
-      .map((pr) => (new Date(pr.merged_at) - new Date(pr.created_at)) / 3_600_000);
-  
-    const closedNoPR = closedIssues.filter((i) => !i.pull_request);
-    const issueDur   = closedNoPR
-      .map((i) => (new Date(i.closed_at) - new Date(i.created_at)) / 3_600_000);
   
     // ─── Commit‑level stats ─────────────────────────────────
     const totalCommits     = commitActivity.reduce((s, w) => s + (w.total || 0), 0);
@@ -165,23 +149,8 @@ const {
         total_commits: totalCommits,
         avg_weekly_commits: avgWeeklyCommits,
         most_active_day: mostActiveDay
-      },
-  
-      pull_requests: {
-        open: repoData.open_issues_count - mergedPRs - closedNoPR.length, // rough
-        merged_100: mergedPRs,
-        avg_merge_hours:   +avg(prDur).toFixed(1),
-        median_merge_hours:+median(prDur).toFixed(1)
-      },
-  
-      issues: {
-        open: repoData.open_issues_count,
-        closed_100: closedNoPR.length,
-        avg_close_hours:   +avg(issueDur).toFixed(1),
-        median_close_hours:+median(issueDur).toFixed(1)
       }
     };
   }
   
   module.exports = { analyzeRepository };
-  
