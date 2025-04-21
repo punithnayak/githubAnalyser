@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────
-//  GitHub Repository Analyzer – React Frontend (MUI + Chart.js)
+//  GitHub Repository Analyzer – React Frontend (MUI + Chart.js)
 // ─────────────────────────────────────────────────────────
 import React, { useState } from "react";
 import axios from "axios";
@@ -11,6 +11,7 @@ import {
   Typography,
   CircularProgress,
   Paper,
+  Autocomplete,
 } from "@mui/material";
 import { Line, Pie } from "react-chartjs-2";
 import {
@@ -42,20 +43,20 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [repoData, setRepoData] = useState(null);
   const [error, setError] = useState(null);
-  const [selectedContributor, setSelected] = useState(null);
+  const [selectedContributor, setSelectedContributor] = useState(null);
   const [showRecent, setShowRecent] = useState(false); // 30‑day toggle
 
   // ─── Helpers ──────────────────────────────────────────
   const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const formatDate = (d) => new Date(d).toLocaleDateString();
-  const h2d = (h) => `${(h / 24).toFixed(1)} d`;
+  const h2d = (h) => `${(h / 24).toFixed(1)} d`;
 
   // ─── Actions ──────────────────────────────────────────
   async function analyzeRepo() {
     try {
       setLoading(true);
       setError(null);
-      setSelected(null);
+      setSelectedContributor(null);
       const { data } = await axios.post(`${apiUrl}/api/analyze`, {
         repo_url: repoUrl,
       });
@@ -68,11 +69,10 @@ export default function App() {
   }
 
   const toggleContributor = (c) =>
-    setSelected((sel) => (sel?.login === c.login ? null : c));
+    setSelectedContributor((sel) => (sel?.login === c.login ? null : c));
   const PieWrapper = ({ children }) => (
     <Box sx={{ width: 320, height: 320, mx: "auto" }}>{children}</Box>
   );
-
 
   // ─── Render ───────────────────────────────────────────
   return (
@@ -124,23 +124,23 @@ export default function App() {
                   mt: 2,
                 }}
               >
-                <Typography>⭐ Stars: {repoData.metadata.stars}</Typography>
-                <Typography>🔄 Forks: {repoData.metadata.forks}</Typography>
-                <Typography>👀 Watchers: {repoData.metadata.watchers}</Typography>
-                <Typography>⚠️ Issues: {repoData.metadata.open_issues}</Typography>
+                <Typography> Stars: {repoData.metadata.stars}</Typography>
+                <Typography> Forks: {repoData.metadata.forks}</Typography>
+                <Typography> Watchers: {repoData.metadata.watchers}</Typography>
+                <Typography> Issues: {repoData.metadata.open_issues}</Typography>
                 <Typography>
-                  📅 Created: {formatDate(repoData.metadata.created_at)}
+                  Created: {formatDate(repoData.metadata.created_at)}
                 </Typography>
                 <Typography>
-                  🔄 Updated: {formatDate(repoData.metadata.updated_at)}
+                  Updated: {formatDate(repoData.metadata.updated_at)}
                 </Typography>
                 <Typography>
-                  💻 Language: {repoData.metadata.language || "N/A"}
+                  Language: {repoData.metadata.language || "N/A"}
                 </Typography>
                 <Typography>
-                  📦 Size: {(repoData.metadata.size / 1024).toFixed(2)} MB
+                  Size: {(repoData.metadata.size / 1024).toFixed(2)} MB
                 </Typography>
-                <Typography>🌿 Branch: {repoData.metadata.default_branch}</Typography>
+                <Typography> Branch: {repoData.metadata.default_branch}</Typography>
               </Box>
             </Box>
 
@@ -180,12 +180,62 @@ export default function App() {
               </Box>
             )}
 
-
             {/* ── Top contributors */}
             <Typography variant="h6" gutterBottom>
               Top Contributors
             </Typography>
             <Box sx={{ mb: 4 }}>
+              {/* Search Contributors */}
+              <Autocomplete
+                options={repoData.contributors}
+                getOptionLabel={(option) => option.login}
+                onChange={(event, newValue) => {
+                  setSelectedContributor(newValue);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Search Contributors"
+                    variant="outlined"
+                    fullWidth
+                    sx={{ mb: 2 }}
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <li {...props}>
+                    <Box>
+                      <Typography>{option.login}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {option.contributions} contributions
+                      </Typography>
+                    </Box>
+                  </li>
+                )}
+              />
+
+              {/* Selected Contributor Stats */}
+              {selectedContributor && (
+                <Paper sx={{ p: 2, mb: 2, bgcolor: "action.selected" }}>
+                  <Typography variant="h6">{selectedContributor.login}</Typography>
+                  <Box sx={{ mt: 1 }}>
+                    <Typography>
+                      Contributions: {selectedContributor.contributions}
+                    </Typography>
+                    <Typography>
+                      Profile:{" "}
+                      <a
+                        href={selectedContributor.html_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {selectedContributor.html_url}
+                      </a>
+                    </Typography>
+                  </Box>
+                </Paper>
+              )}
+
+              {/* Contributors List */}
               {repoData.contributors.map((c) => (
                 <Paper
                   key={c.id}
@@ -215,7 +265,7 @@ export default function App() {
                   <Box sx={{ flex: 1 }}>
                     <Typography variant="subtitle1">{c.login}</Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {c.total_commits} commits
+                      {c.contributions} contributions
                     </Typography>
                   </Box>
                   <Box sx={{ display: "flex", gap: 2 }}>
@@ -277,7 +327,7 @@ export default function App() {
                   <Typography variant="h6">
                     {repoData.commit_stats.avg_weekly_commits}
                   </Typography>
-                  <Typography variant="body2">Avg per Week</Typography>
+                  <Typography variant="body2">Avg per Week</Typography>
                 </Paper>
                 <Paper sx={{ p: 2 }} elevation={2}>
                   <Typography variant="h6">
@@ -298,85 +348,7 @@ export default function App() {
               </Box>
             </Box>
 
-            {/* ── PR & Issue Analytics */}
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                Pull Requests & Issues
-              </Typography>
-
-              {/* Toggle */}
-              <Box sx={{ mb: 2 }}>
-                <Button
-                  variant={showRecent ? "outlined" : "contained"}
-                  onClick={() => setShowRecent(false)}
-                  sx={{ mr: 1 }}
-                >
-                  All‑time
-                </Button>
-                <Button
-                  variant={!showRecent ? "outlined" : "contained"}
-                  onClick={() => setShowRecent(true)}
-                >
-                  Last 30 days
-                </Button>
-              </Box>
-
-              <Box
-                sx={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 2 }}
-              >
-                {/* PR cards */}
-                <Paper sx={{ p: 2 }} elevation={2}>
-                  <Typography variant="h6">
-                    {repoData.pull_requests.open}
-                  </Typography>
-                  <Typography variant="body2">Open PRs</Typography>
-                </Paper>
-                <Paper sx={{ p: 2 }} elevation={2}>
-                  <Typography variant="h6">
-                    {repoData.pull_requests.merged_100}
-                  </Typography>
-                  <Typography variant="body2">Merged PRs (100)</Typography>
-                </Paper>
-                <Paper sx={{ p: 2 }} elevation={2}>
-                  <Typography variant="h6">
-                    {h2d(repoData.pull_requests.avg_merge_hours)}
-                  </Typography>
-                  <Typography variant="body2">Avg merge time</Typography>
-                </Paper>
-                <Paper sx={{ p: 2 }} elevation={2}>
-                  <Typography variant="h6">
-                    {h2d(repoData.pull_requests.median_merge_hours)}
-                  </Typography>
-                  <Typography variant="body2">Median merge time</Typography>
-                </Paper>
-
-                {/* Issue cards */}
-                <Paper sx={{ p: 2 }} elevation={2}>
-                  <Typography variant="h6">{repoData.issues.open}</Typography>
-                  <Typography variant="body2">Open Issues</Typography>
-                </Paper>
-                <Paper sx={{ p: 2 }} elevation={2}>
-                  <Typography variant="h6">
-                    {repoData.issues.closed_100}
-                  </Typography>
-                  <Typography variant="body2">Closed Issues (100)</Typography>
-                </Paper>
-                <Paper sx={{ p: 2 }} elevation={2}>
-                  <Typography variant="h6">
-                    {h2d(repoData.issues.avg_close_hours)}
-                  </Typography>
-                  <Typography variant="body2">Avg close time</Typography>
-                </Paper>
-                <Paper sx={{ p: 2 }} elevation={2}>
-                  <Typography variant="h6">
-                    {h2d(repoData.issues.median_close_hours)}
-                  </Typography>
-                  <Typography variant="body2">Median close time</Typography>
-                </Paper>
-              </Box>
-            </Box>
-
-            {/* ── Code‑change summary */}
+            {/* ── Code-change summary */}
             {repoData.code_frequency?.total && (
               <Box sx={{ mb: 4 }}>
                 <Typography variant="h6" gutterBottom>
@@ -401,12 +373,12 @@ export default function App() {
               </Box>
             )}
 
-            {/* ── Commit activity (52 weeks) */}
+            {/* ── Commit activity (52 weeks) */}
             {Array.isArray(repoData.commit_activity) &&
               repoData.commit_activity.length > 0 && (
                 <Box sx={{ mb: 4 }}>
                   <Typography variant="h6" gutterBottom>
-                    Commits (last 52 weeks)
+                    Commits (last 52 weeks)
                   </Typography>
                   <Line
                     data={{
@@ -425,11 +397,11 @@ export default function App() {
                 </Box>
               )}
 
-            {/* ── Code frequency (12 weeks) */}
+            {/* ── Code frequency (12 weeks) */}
             {repoData.code_frequency?.recent?.length > 0 && (
               <Box sx={{ mb: 4 }}>
                 <Typography variant="h6" gutterBottom>
-                  Code Changes (last 12 weeks)
+                  Code Changes (last 12 weeks)
                 </Typography>
                 <Line
                   data={{
@@ -456,7 +428,7 @@ export default function App() {
               </Box>
             )}
 
-            {/* ── Punch‑card heatmap */}
+            {/* ── Punch-card heatmap */}
             {repoData.punch_card && (
               <Box sx={{ mb: 4 }}>
                 <Typography variant="h6" gutterBottom>
